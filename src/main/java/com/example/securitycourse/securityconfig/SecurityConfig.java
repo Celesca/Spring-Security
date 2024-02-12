@@ -1,7 +1,12 @@
 package com.example.securitycourse.securityconfig;
 
+import com.example.securitycourse.service.AuthenticationUserDetailService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,6 +31,12 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
+    private final AuthenticationUserDetailService authenticationUserDetailService;
+
+    public SecurityConfig(AuthenticationUserDetailService authenticationUserDetailService) {
+        this.authenticationUserDetailService = authenticationUserDetailService;
+    }
+
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
@@ -42,30 +53,50 @@ public class SecurityConfig {
     }
 
     @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfiguration) throws Exception {
+        return authConfiguration.getAuthenticationManager();
+    }
+
+//    @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
-        CustomUserDetail user = new CustomUserDetail("member", encoder.encode("password"));
-        user.setRoles(List.of("MEMBER"));
-        user.setPermissions(List.of("MEMBER_READ"));
-
-//        UserDetails user = User.withUsername("member")
-//                .password(encoder.encode("password"))
-//                .roles("MEMBER") // Spring Collect -> ROLE_MEMBER
-//                .authorities("MEMBER_READ")
-//                .build();
-
-        UserDetails admin = User.withUsername("admin")
-                .password(encoder.encode("password"))
-                .roles("ADMIN")
-                .build();
-
-        return new InMemoryUserDetailsManager(user, admin);
+    public AuthenticationProvider authenticationProvider () {
+        final DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+        authenticationProvider.setUserDetailsService(authenticationUserDetailService);
+        authenticationProvider.setPasswordEncoder(passwordEncoder());
+        return authenticationProvider;
     }
+
+
+
+    // Set permission or role from original userDetailsService
+//    @Bean
+//    public UserDetailsService userDetailsService() {
+//        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+//
+//        CustomUserDetail user = new CustomUserDetail("member", encoder.encode("password"));
+//        user.setRoles(List.of("MEMBER"));
+//        user.setPermissions(List.of("MEMBER_READ"));
+//
+////        UserDetails user = User.withUsername("member")
+////                .password(encoder.encode("password"))
+////                .roles("MEMBER") // Spring Collect -> ROLE_MEMBER
+////                .authorities("MEMBER_READ")
+////                .build();
+//
+//        UserDetails admin = User.withUsername("admin")
+//                .password(encoder.encode("password"))
+//                .roles("ADMIN")
+//                .build();
+//
+//        return new InMemoryUserDetailsManager(user, admin);
+
+
+
+
+
 
 }
