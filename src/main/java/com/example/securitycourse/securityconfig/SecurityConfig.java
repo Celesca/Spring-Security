@@ -1,7 +1,9 @@
 package com.example.securitycourse.securityconfig;
 
 import com.example.securitycourse.service.AuthenticationUserDetailService;
+import com.example.securitycourse.securityconfig.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
+
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -11,17 +13,11 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -32,9 +28,13 @@ import static org.springframework.security.config.Customizer.withDefaults;
 public class SecurityConfig {
 
     private final AuthenticationUserDetailService authenticationUserDetailService;
+    private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(AuthenticationUserDetailService authenticationUserDetailService) {
+
+    public SecurityConfig(AuthenticationUserDetailService authenticationUserDetailService,
+                          JwtAuthFilter jwtAuthFilter) {
         this.authenticationUserDetailService = authenticationUserDetailService;
+        this.jwtAuthFilter = jwtAuthFilter;
     }
 
     @Bean
@@ -43,11 +43,13 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((requests) -> requests
                         .requestMatchers("/public/**").permitAll()
+                                .requestMatchers(HttpMethod.POST,"/auth/authenticate").permitAll()
 //                        .requestMatchers("/member/**").hasAnyRole("MEMBER", "ADMIN")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(new ApiKeyAuthFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthFilter, BasicAuthenticationFilter.class)
+//                .addFilterBefore(new ApiKeyAuthFilter(), BasicAuthenticationFilter.class)
                 .httpBasic(withDefaults())
                 .build();
     }
